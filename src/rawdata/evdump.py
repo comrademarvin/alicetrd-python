@@ -39,6 +39,26 @@ class StdoutHandler(logging.StreamHandler):
         else:
             super().handleError(record)
 
+class digits_csv_file:
+
+    def __init__(self,filename="digits.csv", ntimebins=30):
+        self.outfile = open(filename,"w")
+        self.ntimebins = ntimebins
+        self.outfile.write("ev,det,rob,mcm,channel,padrow,padcol")
+        for i in range(self.ntimebins):
+            self.outfile.write(f",A{i:02}")
+        self.outfile.write("\n")
+
+    def __call__(self,ev,det,rob,mcm,ch,digits):
+        # TODO: calculate pad row/column from rob/mcm/channel
+        padrow = -1
+        padcol = -1
+
+        # save output to file
+        self.outfile.write(f"{ev},{det},{rob},{mcm},{ch},{padrow},{padcol},")
+        self.outfile.write(",".join([str(x) for x in digits]))
+        self.outfile.write("\n")
+
 @click.command()
 @click.argument('source', default='tcp://localhost:7776')
 @click.option('-o', '--loglevel', default=logging.INFO)
@@ -90,7 +110,7 @@ def evdump(source, loglevel, suppress, quiet, skip_events, tracklet_format):
     elif source.endswith('.bin'):
         reader = MiniDaqReader(source)
         reader.hexdump = hdump
-        payloadparser = TrdFeeParser(tracklet_format=tracklet_format)
+        payloadparser = TrdFeeParser(tracklet_format=tracklet_format, store_digits=digits_csv_file("digits.csv"))
         reader.parsers[0x10] = payloadparser
 
     elif source.startswith('tcp://'):
